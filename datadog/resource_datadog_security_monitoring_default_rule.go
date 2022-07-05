@@ -75,6 +75,23 @@ func resourceDatadogSecurityMonitoringDefaultRule() *schema.Resource {
 					},
 				},
 			},
+
+			"options": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Options on default rules. Note that only a subset of fields can be updated on default rule options.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"decrease_criticality_based_on_env": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "If true, signals in non-production environments have a lower severity than what is defined by the rule case, which can reduce noise. The decrement is applied when the environment tag of the signal starts with `staging`, `test` or `dev`.",
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -132,6 +149,13 @@ func resourceDatadogSecurityMonitoringDefaultRuleRead(ctx context.Context, d *sc
 	}
 
 	d.Set("filter", ruleFilters)
+
+	responseOptions := ruleResponse.GetOptions()
+	ruleOptions := []map[string]interface{}{{
+		"decrease_criticality_based_on_env": responseOptions.GetDecreaseCriticalityBasedOnEnv(),
+	}}
+
+	d.Set("options", &ruleOptions)
 
 	return nil
 }
@@ -255,6 +279,19 @@ func buildSecMonDefaultRuleUpdatePayload(currentState datadogV2.SecurityMonitori
 		payloadFilters[idx] = structRuleFilter
 	}
 	payload.Filters = payloadFilters
+
+	tfOptions := d.Get("options").([]map[string]interface{})
+	payloadOptions := datadogV2.NewSecurityMonitoringRuleOptions()
+	emptyOptions := true
+
+	if v, ok := tfOptions[0]["decrease_criticality_based_on_env"]; ok {
+		payloadOptions.SetDecreaseCriticalityBasedOnEnv(v.(bool))
+		emptyOptions = false
+	}
+
+	if !emptyOptions {
+		payload.Options = payloadOptions
+	}
 
 	return &payload, true, nil
 }

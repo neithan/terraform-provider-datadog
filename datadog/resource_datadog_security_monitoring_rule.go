@@ -165,6 +165,13 @@ func datadogSecurityMonitoringRuleSchema() map[string]*schema.Schema {
 							},
 						},
 					},
+
+					"decrease_criticality_based_on_env": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Default:     false,
+						Description: "If true, signals in non-production environments have a lower severity than what is defined by the rule case, which can reduce noise. The decrement is applied when the environment tag of the signal starts with `staging`, `test` or `dev`.",
+					},
 				},
 			},
 		},
@@ -383,6 +390,9 @@ func buildPayloadOptions(tfOptionsList []interface{}) *datadogV2.SecurityMonitor
 	if v, ok := tfOptions["max_signal_duration"]; ok {
 		maxSignalDuration := datadogV2.SecurityMonitoringRuleMaxSignalDuration(v.(int))
 		payloadOptions.MaxSignalDuration = &maxSignalDuration
+	}
+	if v, ok := tfOptions["decrease_criticality_based_on_env"]; ok {
+		payloadOptions.SetDecreaseCriticalityBasedOnEnv(v.(bool))
 	}
 
 	if v, ok := tfOptions["new_value_options"]; ok {
@@ -624,6 +634,9 @@ func extractTfOptions(options datadogV2.SecurityMonitoringRuleOptions) map[strin
 	}
 	if maxSignalDuration, ok := options.GetMaxSignalDurationOk(); ok {
 		tfOptions["max_signal_duration"] = *maxSignalDuration
+	}
+	if decreaseCriticalityBasedOnEnv, ok := options.GetDecreaseCriticalityBasedOnEnvOk(); ok {
+		tfOptions["decrease_criticality_based_on_env"] = *decreaseCriticalityBasedOnEnv
 	}
 	if detectionMethod, ok := options.GetDetectionMethodOk(); ok {
 		tfOptions["detection_method"] = *detectionMethod
